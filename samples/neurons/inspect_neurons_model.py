@@ -1,24 +1,18 @@
 #!/usr/bin/env python
 # coding: utf-8
-
 # # Mask R-CNN - Inspect Neurons Trained Model
-# 
 # Code and visualizations to test, debug, and evaluate the Mask R-CNN model.
 
 #%%
 import os
 import sys
 import random
-import math
-import re
-import time
 import numpy as np
 import tensorflow as tf
 import matplotlib
 matplotlib.rcParams['pdf.fonttype'] = '42'
 matplotlib.rcParams['ps.fonttype'] = '42'
 import matplotlib.pyplot as plt
-import matplotlib.patches as patches
 try:
     if __IPYTHON__:
         # this is used for debugging purposes only. allows to reload classes when changed
@@ -27,39 +21,36 @@ try:
 except NameError:
     pass
 
-# Root directory of the project
-ROOT_DIR = os.path.abspath("/home/nel/Code/NEL_LAB/Mask_RCNN/")
-
-# Import Mask RCNN
-sys.path.append(ROOT_DIR)  # To find local version of the library
+from caiman.base.rois import nf_match_neurons_in_binary_masks
 from mrcnn import utils
 from mrcnn import visualize
 from mrcnn.visualize import display_images
 import mrcnn.model as modellib
 from mrcnn.model import log
-
 from samples.neurons import neurons
+
+# Root directory of the project
+ROOT_DIR = os.path.abspath(os.getcwd())
+
+# Import Mask RCNN
+sys.path.append(ROOT_DIR)  # To find local version of the library
 
 get_ipython().run_line_magic('matplotlib', 'inline')
 
 # Directory to save logs and trained model
 MODEL_DIR = os.path.join(ROOT_DIR, "logs")
 
-# ## Configurations
-
-# %%
+# %% Configurations
 config = neurons.NeuronsConfig()
-cross = 'cross3'
 NEURONS_DIR = os.path.join(ROOT_DIR, ("datasets/neurons_3channel_cross1_all"))
 
-# %%
 # Override the training configurations with a few
 # changes for inferencing.
 class InferenceConfig(config.__class__):
     # Run detection on one image at a time
     GPU_COUNT = 1
     IMAGES_PER_GPU = 1
-    DETECTION_MIN_CONFIDENCE = 0.8
+    DETECTION_MIN_CONFIDENCE = 0.7
     IMAGE_RESIZE_MODE = "pad64"
     IMAGE_MAX_DIM=512
     #CLASS_THRESHOLD = 0.33
@@ -105,7 +96,6 @@ dataset.load_neurons(NEURONS_DIR, "val")
 dataset.prepare()
 print("Images: {}\nClasses: {}".format(len(dataset.image_ids), dataset.class_names))
 
-
 # ## Load Model
 # Create model in inference mode
 with tf.device(DEVICE):
@@ -114,7 +104,6 @@ with tf.device(DEVICE):
 
 # %%
 # Set path to balloon weights file
-
 # Download file from the Releases page and set its path
 # https://github.com/matterport/Mask_RCNN/releases
 # weights_path = "/path/to/mask_rcnn_balloon.h5"
@@ -135,10 +124,7 @@ weights_path = model.find_last()
 print("Loading weights ", weights_path)
 model.load_weights(weights_path, by_name=True)
 
-
-# ## Run Detection
-
-# %%
+# %% Run Detection
 prop = 'val'
 dataset = neurons.NeuronsDataset()
 dataset.load_neurons(NEURONS_DIR, prop)
@@ -146,25 +132,22 @@ dataset.load_neurons(NEURONS_DIR, prop)
 # Must call before using the dataset
 dataset.prepare()
 
-import os 
-folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/output/'+os.path.split(os.path.split(weights_path)[0])[-1]+'/'+prop+'/'
+folder = os.getcwd() + 'output/'+os.path.split(os.path.split(weights_path)[0])[-1]+'/'+prop+'/'
 try:
     os.makedirs(folder)
     print('make folder')
 except:
     print('already exist')
 
-
-# %%
+# %% Result of one dataset
 image_id = random.choice(dataset.image_ids)
-image_id = 1
+image_id = 0
 image, image_meta, gt_class_id, gt_bbox, gt_mask =    modellib.load_image_gt(dataset, config, image_id, use_mini_mask=False)
 info = dataset.image_info[image_id]
 print("image ID: {}.{} ({}) {}".format(info["source"], info["id"], image_id, 
                                        dataset.image_reference(image_id)))
 
 # Run object detection
-
 results = model.detect([image], verbose=1)
 
 # Display results
@@ -178,8 +161,7 @@ log("gt_bbox", gt_bbox)
 log("gt_mask", gt_mask)
 
 
-# %%
-from caiman.base.rois import nf_match_neurons_in_binary_masks
+# %% Result of all datasets
 performance=[]
 F1 = {}
 recall = {}
@@ -219,7 +201,7 @@ for image_id in dataset.image_ids:
     precision[dataset.image_info[image_id]['id'][:-4]] = performance_cons_off['precision']
     number[dataset.image_info[image_id]['id'][:-4]] = dataset.image_info[image_id]['polygons'].shape[0]
 
-# %%
+# %% F1 score
 processed = {}
 for i in ['F1','recall','precision','number']:
     result = eval(i)
@@ -244,6 +226,7 @@ for i in ['F1','recall','precision','number']:
             else:
                 processed[i]['HPC'] = sum(temp)/len(temp)
 
+####################################################################################
 # %%
 results_all[cross+'_'+prop] = processed
 
