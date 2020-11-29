@@ -25,7 +25,13 @@ masks_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/labels/combination_v1.2'
 #save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_L1_2'
 #save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_L1_1'
 #save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_TEG_2'
-save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_TEG_1'
+#save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_TEG_1'
+#save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_HPC_8'
+#save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_HPC_4'
+#save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_HPC_2'
+#save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_HPC_1'
+save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_HPC_4_2'
+
 
 try:
     os.mkdir(save_folder)
@@ -44,8 +50,13 @@ files = np.array([file for file in files if '_summary.tif' in file])
 #val_set = np.array([2, 5, 6, 11, 14, 17, 20, 23])
 #val_set = np.array([3, 8, 10])
 #train_set = np.array([4])
-val_set = np.array([0])
-train_set = np.array([1])
+#val_set = np.array([0])
+#train_set = np.array([1])
+val_set = np.array([14, 17, 20, 23])
+train_set = np.arange(12, 24)
+train_set = np.array(list(set(train_set) - set(val_set)))
+#train_set = np.array([22])
+train_set = np.array([12, 15, 18, 21])
 
 for file in files:
     if file in files[val_set]:
@@ -94,4 +105,53 @@ for i, p in enumerate(polygons):
     rr, cc = skimage.draw.polygon(p['all_points_y'], p['all_points_x'])
     mask[rr, cc, i] = 1            
 """           
+#%%
+folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_L1_6/train'     
+files = os.listdir(folder)
+files = [file for file in files if 'mask' in file]
+for file in files:
+    m = np.load(os.path.join(folder, file), allow_pickle=True)['mask']
+    print(file)
+    print(m.shape)
+#%%
+m = np.load('/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_L1_1/train/FOV1_35um.npz', allow_pickle=True)['img']
+mask = np.load('/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_L1_1/train/FOV1_35um_mask.npz', allow_pickle=True)['mask']
+
+thresh = 296
+n = 0
+mask_new = []
+for mm in mask:
+    #print(mm)
+    print(sum(mm['all_points_y']>thresh))
+    if sum(mm['all_points_y']>thresh) > 15:
+        n = n + 1
+        mm['all_points_y'] = mm['all_points_y'] - thresh 
+        mask_new.append(mm)
+    print(f'number of masks: {n}')
+    
+mask_new = np.array(mask_new)
+    
+m1 = m[thresh:, :, :]
+plt.imshow(m1[:,:,0])
+
+import skimage
+masks = np.zeros((m1.shape[0], m1.shape[1], mask_new.shape[0]))
+for i, mm in enumerate(mask_new):
+    rr, cc = skimage.draw.polygon(mm['all_points_y'], mm['all_points_x'])
+    masks[rr, cc, i] = 1
+plt.imshow(masks.sum(2));plt.show()
+plt.imshow(m1[:,:,0])
+
+#%%
+save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_L1_0.5'
+group = 'train'
+np.savez(save_folder + '/' + group + '/' + file[:-4]+'_half.npz', img = m1)
+np.savez(save_folder+'/'+group+'/'+file[:-4]+'_mask.npz', mask = mask_new) 
+#%%
         
+
+
+
+
+
+

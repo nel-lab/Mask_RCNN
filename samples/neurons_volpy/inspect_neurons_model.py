@@ -32,7 +32,7 @@ from mrcnn.visualize import display_images
 import mrcnn.model as modellib
 from mrcnn.model import log
 
-from samples.neurons import neurons
+from samples.neurons import neurons_volpy
 from caiman.base.rois import nf_match_neurons_in_binary_masks
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -61,7 +61,7 @@ def get_ax(rows=1, cols=1, size=16):
 
 #%%
 # ## Configurations
-config = neurons.NeuronsConfig()
+config = neurons_volpy.NeuronsConfig()
 class InferenceConfig(config.__class__):
     # Run detection on one image at a time
     GPU_COUNT = 1
@@ -85,10 +85,13 @@ config.display()
 #dataset_idx = 2
 #mode = ["train", "val"][1]
 for mode in ["train", "val"]:
-    for dataset_idx in [7,8]:
+    for dataset_idx in [3, 4, 6, 7, 8, 9, 14, 15, 16]:
         dataset_name = ["voltage_v1.2", "voltage_v1.2_cross2", "voltage_v1.2_cross3",
                         "voltage_v1.2_L1_6", "voltage_v1.2_L1_4", "voltage_v1.2_L1_2", "voltage_v1.2_L1_1", 
-                        "voltage_v1.2_TEG_2", "voltage_v1.2_TEG_1"] [dataset_idx]
+                        "voltage_v1.2_TEG_2", "voltage_v1.2_TEG_1", "voltage_v1.2_HPC_8", "voltage_v1.2_HPC_4",
+                        "voltage_v1.2_HPC_2", "voltage_v1.2_HPC_1", "voltage_v1.2_rerun", "voltage_v1.2_HPC_4_2", 
+                        'voltage_v1.2_L1_0.5', "voltage_v1.2_L1_2"][dataset_idx]
+        """
         weights = ["/neurons20200824T1032/mask_rcnn_neurons_0040.h5",
                    "/neurons20200825T0951/mask_rcnn_neurons_0040.h5", 
                    "/neurons20200825T1039/mask_rcnn_neurons_0040.h5",
@@ -97,11 +100,36 @@ for mode in ["train", "val"]:
                    '/neurons20200901T1058/mask_rcnn_neurons_0030.h5',
                    '/neurons20200902T1530/mask_rcnn_neurons_0030.h5',
                    "/neurons20200903T1124/mask_rcnn_neurons_0030.h5",
-                   "/neurons20200903T1215/mask_rcnn_neurons_0030.h5"
+                   "/neurons20200903T1215/mask_rcnn_neurons_0030.h5",
+                   '/neurons20200926T0919/mask_rcnn_neurons_0030.h5', 
+                   "/neurons20200926T1036/mask_rcnn_neurons_0030.h5",
+                   "/neurons20200926T1124/mask_rcnn_neurons_0030.h5", 
+                   "/neurons20200926T1213/mask_rcnn_neurons_0030.h5",
+                   "/neurons20201010T1758/mask_rcnn_neurons_0040.h5",
+                   "/neurons20201015T1403/mask_rcnn_neurons_0030.h5",
+                   "/neurons20201019T1034/mask_rcnn_neurons_0030.h5"][dataset_idx]
+        """
+        weights = ["/neurons20200824T1032/mask_rcnn_neurons_0040.h5",
+                   "/neurons20200825T0951/mask_rcnn_neurons_0040.h5", 
+                   "/neurons20200825T1039/mask_rcnn_neurons_0040.h5",
+                   '/neurons20200901T0906/mask_rcnn_neurons_0040.h5',
+                   '/neurons20200901T1008/mask_rcnn_neurons_0040.h5',
+                   '/neurons20200901T1058/mask_rcnn_neurons_0040.h5',
+                   '/neurons20200902T1530/mask_rcnn_neurons_0040.h5',
+                   "/neurons20200903T1124/mask_rcnn_neurons_0040.h5",
+                   "/neurons20200903T1215/mask_rcnn_neurons_0040.h5",
+                   '/neurons20200926T0919/mask_rcnn_neurons_0040.h5', 
+                   "/neurons20200926T1036/mask_rcnn_neurons_0040.h5",
+                   "/neurons20200926T1124/mask_rcnn_neurons_0040.h5", 
+                   "/neurons20200926T1213/mask_rcnn_neurons_0040.h5",
+                   "/neurons20201010T1758/mask_rcnn_neurons_0040.h5",
+                   "/neurons20201015T1403/mask_rcnn_neurons_0040.h5",
+                   "/neurons20201019T1034/mask_rcnn_neurons_0040.h5",
+                   "/neurons20201116T1141/mask_rcnn_neurons_0040.h5"
                    ][dataset_idx]
         
         NEURONS_DIR = os.path.join(ROOT_DIR, ("datasets/" + dataset_name))
-        dataset = neurons.NeuronsDataset()
+        dataset = neurons_volpy.NeuronsDataset()
         dataset.load_neurons(NEURONS_DIR, mode)
         
         # Must call before using the dataset
@@ -122,14 +150,14 @@ for mode in ["train", "val"]:
         print("Loading weights ", weights_path)
         model.load_weights(weights_path, by_name=True)
         
-        
+        """
         folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/result/'+os.path.split(os.path.split(weights_path)[0])[-1]+'/'+mode+'/'
         try:
             os.makedirs(folder)
             print('make folder')
         except:
             print('already exist')        
-        
+        """
         # %% Run Detection
         run_single_detection = False
         if run_single_detection:
@@ -185,7 +213,7 @@ for mode in ["train", "val"]:
             r['class_ids'] = r['class_ids'][neuron_idx]
             r['scores'] = r['scores'][neuron_idx]
         
-            display_result = True
+            display_result = False
             if display_result:  
                 visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], 
                                             dataset.class_names, r['scores'], ax=ax,
@@ -200,14 +228,14 @@ for mode in ["train", "val"]:
             tp_gt, tp_comp, fn_gt, fp_comp, performance_cons_off = nf_match_neurons_in_binary_masks(
                     mask_gt, mask_pr, thresh_cost=0.7, min_dist=10, print_assignment=True,
                     plot_results=True, Cn=image[:,:,0], labels=['GT', 'MRCNN'])
-            plt.savefig(folder +dataset.image_info[image_id]['id'][:-4]+'_compare.pdf')
+            #plt.savefig(folder +dataset.image_info[image_id]['id'][:-4]+'_compare.pdf')
             plt.close()
             performance[info['id'][:-4]] = performance_cons_off
             F1[dataset.image_info[image_id]['id'][:-4]] = performance_cons_off['f1_score']
             recall[dataset.image_info[image_id]['id'][:-4]] = performance_cons_off['recall']
             precision[dataset.image_info[image_id]['id'][:-4]] = performance_cons_off['precision']
             number[dataset.image_info[image_id]['id'][:-4]] = dataset.image_info[image_id]['polygons'].shape[0]
-            np.save(ROOT_DIR + '/result_f1/' + dataset_name + '_' + mode, performance)
+        np.save(ROOT_DIR + '/result_f1/40_epochs/' + dataset_name + '_' + mode, performance)
         # %%
         processed = {}
         for i in ['F1','recall','precision','number']:
@@ -221,7 +249,7 @@ for mode in ["train", "val"]:
                         processed[i]['L1'] = sum(temp)
                     else:
                         processed[i]['L1'] = sum(temp)/len(temp)
-                """
+                
                 if j == 'TEG':
                     temp = [result[i] for i in result.keys() if 'Fish' in i]
                     if i == 'number':
@@ -235,6 +263,6 @@ for mode in ["train", "val"]:
                         processed[i]['HPC'] = sum(temp)
                     else:
                         processed[i]['HPC'] = sum(temp)/len(temp)
-                """
+            
         print(processed)
         #np.save(os.path.join(ROOT_DIR, 'result_f1', dataset_name) + '_' +mode, processed)
