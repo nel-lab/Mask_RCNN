@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Nov 21 15:45:10 2020
+
+@author: nel
+"""
+
+#%% Create zenedo .zip files
+import shutil
+ROOT_FOLDER = 
+ROI_FOLDER = '/home/nel/NEL-LAB Dropbox/NEL/Papers/VolPy/manual_annotations/summary_images/combination_v1.2'
+SAVE_FOLDER = '/home/nel/NEL-LAB Dropbox/NEL/Papers/VolPy/Video&ROI'
+ZIP_FOLDER = '/home/nel/NEL-LAB Dropbox/NEL/Papers/VolPy/zenodo'
+
+folders = sorted(os.listdir(SAVE_FOLDER))
+folders = [folder for folder in folders if '.txt' not in folder]
+for folder in folders:
+    if '.txt' not in folder:
+        path = os.path.join(SAVE_FOLDER, folder, folder+'_ROI.zip')
+        try:
+            os.remove(path)
+        except:
+            pass
+
+files = sorted(os.listdir(ROI_FOLDER))
+for file in files:
+    load_path = os.path.join(ROI_FOLDER, file)
+    save_path = os.path.join(SAVE_FOLDER, file)
+    shutil.copy(load_path, save_path)
+    
+#%%
+dictionary = {'HPC.29.04': 'IVQ29_S5_FOV4.zip', 
+ 'HPC.29.06': 'IVQ29_S5_FOV6.zip', 
+ 'HPC.32.01': 'IVQ32_S2_FOV1.zip',
+ 'HPC.38.03': 'IVQ38_S2_FOV3.zip', 
+ 'HPC.38.05': 'IVQ38_S1_FOV5.zip',
+ 'HPC.39.03': 'IVQ39_S2_FOV3.zip',
+ 'HPC.39.04': 'IVQ39_S2_FOV4.zip',
+ 'HPC.39.07': 'IVQ39_S1_FOV7.zip',
+ 'HPC.48.01': 'IVQ48_S7_FOV1.zip',
+ 'HPC.48.05': 'IVQ48_S7_FOV5.zip',
+ 'HPC.48.07': 'IVQ48_S7_FOV7.zip',
+ 'HPC.48.08': 'IVQ48_S7_FOV8.zip',
+ 'L1.00.00': '403106_3min.zip',
+ 'L1.01.00': 'FOV1.zip',
+ 'L1.01.35': 'FOV1_35um.zip',
+ 'L1.02.00': 'FOV2.zip',
+ 'L1.02.80': 'FOV2_80um.zip',
+ 'L1.03.00': 'FOV3.zip',
+ 'L1.03.35': 'FOV3_35um.zip',
+ 'L1.04.00': 'FOV4.zip',
+ 'L1.04.50': 'FOV4_50um.zip',
+ 'TEG.01.02': '06152017Fish1-2.zip',
+ 'TEG.02.01': '10192017Fish2-1.zip',
+ 'TEG.03.01': '10192017Fish3-1.zip'}
+
+#%%
+for key, value in dictionary.items():
+    load_path = os.path.join(ROI_FOLDER, value)
+    save_path = os.path.join(SAVE_FOLDER, key, f'{key}_ROI.zip')
+    shutil.copy(load_path, save_path)
+    
+#%%
+folders = sorted(os.listdir(SAVE_FOLDER))
+folders = [folder for folder in folders if '.txt' not in folder]
+for folder in folders:
+    try:
+        shutil.make_archive(os.path.join(ZIP_FOLDER, folder), 'zip', os.path.join(SAVE_FOLDER, folder))
+    except:
+        pass
+
+
+
+
+
+
+
+
+
