@@ -53,41 +53,89 @@ DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
 #  Configurations
 ############################################################
 
-
-class BalloonConfig(Config):
-    """Configuration for training on the toy  dataset.
-    Derives from the base Config class and overrides some values.
-    """
+class NeuronsConfig(Config):
+    """Configuration for training on the nucleus segmentation dataset."""
     # Give the configuration a recognizable name
-    NAME = "cellfie"
+    NAME = "neurons"
 
-    # We use a GPU with 12GB memory, which can fit two images.
-    # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 2
+    # Adjust depending on your GPU memory
+    IMAGES_PER_GPU = 4
 
     # Number of classes (including background)
-    NUM_CLASSES = 1 + 1  # Background + balloon
+    NUM_CLASSES = 1 + 1  # Background + nucleus
 
-    # Number of training steps per epoch
-    STEPS_PER_EPOCH = 100
+    # Number of training and validation steps per epoch
+    #STEPS_PER_EPOCH = (657 - len(VAL_IMAGE_IDS)) // IMAGES_PER_GPU
+    #VALIDATION_STEPS = max(1, len(VAL_IMAGE_IDS) // IMAGES_PER_GPU)
+    STEPS_PER_EPOCH = 100    
+    
+    # Don't exclude based on confidence. Since we have two classes
+    # then 0.5 is the minimum anyway as it picks between nucleus and BG
+    DETECTION_MIN_CONFIDENCE = 0.8
 
-    # Skip detections with < 90% confidence
-    DETECTION_MIN_CONFIDENCE = 0.6
+    # Backbone network architecture
+    # Supported values are: resnet50, resnet101
+    BACKBONE = "resnet50"
 
+    # Input image resizing
+    # Random crops of size 512x512
+    IMAGE_RESIZE_MODE = "crop"
+    IMAGE_MIN_DIM = 128
+    #IMAGE_MIN_DIM = 512
+    #IMAGE_MAX_DIM = 512
+    #IMAGE_MIN_SCALE = 2.0
+
+    # Length of square anchor side in pixels
+    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)#(4, 8, 16, 32, 64)#(8, 16, 32, 64, 128) 
+
+    # ROIs kept after non-maximum supression (training and inference)
+    POST_NMS_ROIS_TRAINING = 1000
+    POST_NMS_ROIS_INFERENCE = 2000
+
+    # Non-max suppression threshold to filter RPN proposals.
+    # You can increase this during training to generate more propsals.
+    RPN_NMS_THRESHOLD = 0.7
+
+    # How many anchors per image to use for RPN training
+    RPN_TRAIN_ANCHORS_PER_IMAGE = 100
+
+    # Image mean (RGB)
+    MEAN_PIXEL = np.array([0,0,0])
+
+    # If enabled, resizes instance masks to a smaller size to reduce
+    # memory load. Recommended when using high-resolution images.
+    USE_MINI_MASK = True
+    MINI_MASK_SHAPE = (56, 56)  # (height, width) of the mini-mask
+
+    # Number of ROIs per image to feed to classifier/mask heads
+    # The Mask RCNN paper uses 512 but often the RPN doesn't generate
+    # enough positive proposals to fill this and keep a positive:negative
+    # ratio of 1:3. You can increase the number of proposals by adjusting
+    # the RPN NMS threshold.
+    TRAIN_ROIS_PER_IMAGE = 100
+
+    # Maximum number of ground truth instances to use in one image
+    MAX_GT_INSTANCES = 200
+
+    # Max number of final detections per image
+    DETECTION_MAX_INSTANCES = 200
+    
+    WEIGHT_DECAY = 0.0001
+    
 
 ############################################################
 #  Dataset
 ############################################################
 
-class BalloonDataset(utils.Dataset):
+class NeuronsDataset(utils.Dataset):
 
-    def load_balloon(self, dataset_dir, subset):
+    def load_neurons(self, dataset_dir, subset):
         """Load a subset of the Balloon dataset.
         dataset_dir: Root directory of the dataset.
         subset: Subset to load: train or val
         """
-        # Add classes. We have only one class to add.
-        self.add_class("balloon", 1, "balloon")
+        # Add classes. We have only     one class to add.
+        self.add_class("neurons", 1, "neurons")
         # Train or validation dataset?
         assert subset in ["train", "val"]
         dataset_dir = os.path.join(dataset_dir, subset)
@@ -98,11 +146,11 @@ class BalloonDataset(utils.Dataset):
         for a in annotations:
             polygons = np.array(a["regions"])
             image_path = os.path.join(dataset_dir, a['filename'])
-            image = skimage.io.imread(image_path)
+            image = np.load(image_path)["arr_0"] #image = skimage.io.imread(image_path)
             height, width = image.shape[:2]
 
             self.add_image(
-                "balloon",
+                "neurons",
                 image_id=a['filename'],  # use file name as a unique image id
                 path=image_path,
                 width=width, height=height,
@@ -111,7 +159,7 @@ class BalloonDataset(utils.Dataset):
     def load_mask(self, image_id):
         # If not a balloon dataset image, delegate to parent class.
         image_info = self.image_info[image_id]
-        if image_info["source"] != "balloon":
+        if image_info["source"] != "neurons":
             return super(self.__class__, self).load_mask(image_id)
         info = self.image_info[image_id]
         mask = info["polygons"]
@@ -122,7 +170,7 @@ class BalloonDataset(utils.Dataset):
     def image_reference(self, image_id):
         """Return the path of the image."""
         info = self.image_info[image_id]
-        if info["source"] == "balloon":
+        if info["source"] == "neurons":
             return info["path"]
         else:
             super(self.__class__, self).image_reference(image_id)
@@ -131,25 +179,77 @@ class BalloonDataset(utils.Dataset):
 def train(model):
     """Train the model."""
     # Training dataset.
-    dataset_train = BalloonDataset()
-    dataset_train.load_balloon(args.dataset, "train")
+    dataset_train = NeuronsDataset()
+    dataset_train.load_neurons(args.dataset, "train")
     dataset_train.prepare()
 
     # Validation dataset
-    dataset_val = BalloonDataset()
-    dataset_val.load_balloon(args.dataset, "val")
+    dataset_val = NeuronsDataset()
+    dataset_val.load_neurons(args.dataset, "val")
     dataset_val.prepare()
 
     # *** This training schedule is an example. Update to your needs ***
     # Since we're using a very small dataset, and starting from
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
-    print("Training network heads")
-    model.train(dataset_train, dataset_val,
-                learning_rate=config.LEARNING_RATE,
-                epochs=30,
-                layers='heads')
+    import imgaug.augmenters as iaa
+    sometimes = lambda aug: iaa.Sometimes(0.5, aug)
+    seldom = lambda aug: iaa.Sometimes(0.2, aug)
+    
+    augmentation = iaa.Sequential([iaa.Fliplr(0.5),
+                                  iaa.Flipud(0.5),
+                                  iaa.Affine(rotate=(-180, 180)),          
+                                  #sometimes(iaa.GaussianBlur(sigma=(0, 0.25))),
+                                  sometimes(iaa.Multiply((0.5,2))),
+                                  sometimes(iaa.Affine(shear=(-2,2))),
+                                  sometimes(iaa.Affine(scale=(0.5, 1.5)))],random_order=True)
 
+    print("Train network heads")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-2,    
+                epochs= 20,
+                layers='heads',
+                augmentation = augmentation)
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-3,
+                epochs= 120,
+                layers='all',
+                augmentation = augmentation)
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-4,
+                epochs= 160,
+                layers='all',
+                augmentation = augmentation)
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-5,
+                epochs= 200,
+                layers='all',
+                augmentation = augmentation)
+    """
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-4,
+                epochs= 140,
+                layers='all',
+                augmentation = augmentation)
+        
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-3,
+                epochs= 80,
+                layers='3+',
+                augmentation = augmentation)
+    
+    print("Train all stages")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-3,
+                epochs= 120,
+                layers='all',
+                augmentation = augmentation)
+    """
 
 def color_splash(image, mask):
     """Apply color splash effect.
@@ -222,7 +322,6 @@ def detect_and_color_splash(model, image_path=None, video_path=None):
         vwriter.release()
     print("Saved to ", file_name)
 
-
 ############################################################
 #  Training
 ############################################################
@@ -232,13 +331,13 @@ if __name__ == '__main__':
 
     # Parse command line arguments
     parser = argparse.ArgumentParser(
-        description='Train Mask R-CNN to detect balloons.')
+        description='Train Mask R-CNN to detect neurons.')
     parser.add_argument("command",
                         metavar="<command>",
                         help="'train' or 'splash'")
     parser.add_argument('--dataset', required=False,
                         metavar="/path/to/balloon/dataset/",
-                        help='Directory of the Balloon dataset')
+                        help='Directory of the Neurons dataset')
     parser.add_argument('--weights', required=True,
                         metavar="/path/to/weights.h5",
                         help="Path to weights .h5 file or 'coco'")
@@ -267,13 +366,14 @@ if __name__ == '__main__':
 
     # Configurations
     if args.command == "train":
-        config = BalloonConfig()
+        config = NeuronsConfig()
     else:
-        class InferenceConfig(BalloonConfig):
+        class InferenceConfig(NeuronsConfig):
             # Set batch size to 1 since we'll be running inference on
             # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
             GPU_COUNT = 1
             IMAGES_PER_GPU = 1
+            IMAGE_RESIZE_MODE = "none"
         config = InferenceConfig()
     config.display()
 

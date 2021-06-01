@@ -157,14 +157,14 @@ class NeuronsDataset(utils.Dataset):
         # }
         # We mostly care about the x and y coordinates of each region
         # Note: In VIA 2.0, regions was changed from a dict to a list.
-        
+
         group = [i for i in sorted(os.listdir(dataset_dir)) if 'mask' not in i]
         for a in group:
             fname = dataset_dir + '/' + a
             print(fname)
-            polygons = np.load(fname[:-4]+'_mask.npz', allow_pickle=True)['arr_0']
+            polygons = np.load(fname[:-4]+'_mask.npz', allow_pickle=True)['mask']
             image_path = os.path.join(dataset_dir, a)
-            image = np.load(image_path)['arr_0'].astype(np.float32)
+            image = np.load(image_path)['img'].astype(np.float32)
             height, width = image.shape[:2]
             self.add_image(
                 source = "neurons",
@@ -172,6 +172,7 @@ class NeuronsDataset(utils.Dataset):
                 path=image_path,
                 width=width, height=height,
                 polygons=polygons)
+        
         """
         group = [i for i in sorted(os.listdir(dataset_dir)) if 'mask' not in i]
         for a in group:
