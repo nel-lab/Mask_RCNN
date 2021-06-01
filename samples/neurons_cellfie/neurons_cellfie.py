@@ -59,7 +59,7 @@ class NeuronsConfig(Config):
     NAME = "neurons"
 
     # Adjust depending on your GPU memory
-    IMAGES_PER_GPU = 6
+    IMAGES_PER_GPU = 4
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 1  # Background + nucleus
@@ -86,7 +86,7 @@ class NeuronsConfig(Config):
     #IMAGE_MIN_SCALE = 2.0
 
     # Length of square anchor side in pixels
-    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)   #(8, 16, 32, 64, 128) 
+    RPN_ANCHOR_SCALES = (16, 32, 64, 128, 256)#(4, 8, 16, 32, 64)#(8, 16, 32, 64, 128) 
 
     # ROIs kept after non-maximum supression (training and inference)
     POST_NMS_ROIS_TRAINING = 1000
@@ -112,7 +112,7 @@ class NeuronsConfig(Config):
     # enough positive proposals to fill this and keep a positive:negative
     # ratio of 1:3. You can increase the number of proposals by adjusting
     # the RPN NMS threshold.
-    TRAIN_ROIS_PER_IMAGE = 200
+    TRAIN_ROIS_PER_IMAGE = 100
 
     # Maximum number of ground truth instances to use in one image
     MAX_GT_INSTANCES = 200
@@ -202,20 +202,47 @@ def train(model):
                                   #sometimes(iaa.GaussianBlur(sigma=(0, 0.25))),
                                   sometimes(iaa.Multiply((0.5,2))),
                                   sometimes(iaa.Affine(shear=(-2,2))),
-                                  sometimes(iaa.Affine(scale=(0.5, 3)))],random_order=True)
+                                  sometimes(iaa.Affine(scale=(0.5, 1.5)))],random_order=True)
+
     print("Train network heads")
     model.train(dataset_train, dataset_val,
-                learning_rate=1e-2,
+                learning_rate=1e-2,    
                 epochs= 20,
                 layers='heads',
                 augmentation = augmentation)
     print("Train since resnet stage 4")
     model.train(dataset_train, dataset_val,
                 learning_rate=1e-3,
+                epochs= 120,
+                layers='all',
+                augmentation = augmentation)
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-4,
+                epochs= 160,
+                layers='all',
+                augmentation = augmentation)
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-5,
+                epochs= 200,
+                layers='all',
+                augmentation = augmentation)
+    """
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-4,
+                epochs= 140,
+                layers='all',
+                augmentation = augmentation)
+        
+    print("Train since resnet stage 4")
+    model.train(dataset_train, dataset_val,
+                learning_rate=1e-3,
                 epochs= 80,
                 layers='3+',
                 augmentation = augmentation)
-    """
+    
     print("Train all stages")
     model.train(dataset_train, dataset_val,
                 learning_rate=1e-3,

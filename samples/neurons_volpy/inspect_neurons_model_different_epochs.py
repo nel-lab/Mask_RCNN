@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # # Mask R-CNN - Inspect Neurons Trained Model
 # Code and visualizations to test, debug, and evaluate the Mask R-CNN model.
 

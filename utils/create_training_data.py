@@ -147,7 +147,21 @@ save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/datasets/voltage_v1.2_L1_0.5'
 group = 'train'
 np.savez(save_folder + '/' + group + '/' + file[:-4]+'_half.npz', img = m1)
 np.savez(save_folder+'/'+group+'/'+file[:-4]+'_mask.npz', mask = mask_new) 
-#%%
+
+#%% transform labels to hdf5 for Viola 
+from caiman.base.rois import nf_read_roi_zip
+folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/labels/combination_v1.2'
+save_folder = '/home/nel/Code/NEL_LAB/Mask_RCNN/labels/combination_v1.2_hdf5'
+files = os.listdir(folder)
+files = sorted([file for file in files if 'Fish' not in file and 'IVQ' not in file])
+for file in files:
+    path = os.path.join(folder, file)
+    m = nf_read_roi_zip(path, dims=(512, 128))
+    cm.movie(m).save(os.path.join(save_folder, file[:-4]+'_ROIs.hdf5'))
+
+    
+        
+    
         
 
 

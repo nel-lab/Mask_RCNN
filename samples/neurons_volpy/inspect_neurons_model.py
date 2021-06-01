@@ -32,7 +32,7 @@ from mrcnn.visualize import display_images
 import mrcnn.model as modellib
 from mrcnn.model import log
 
-from samples.neurons import neurons_volpy
+from samples.neurons_volpy import neurons_volpy
 from caiman.base.rois import nf_match_neurons_in_binary_masks
 
 get_ipython().run_line_magic('matplotlib', 'inline')
@@ -85,7 +85,7 @@ config.display()
 #dataset_idx = 2
 #mode = ["train", "val"][1]
 for mode in ["train", "val"]:
-    for dataset_idx in [3, 4, 6, 7, 8, 9, 14, 15, 16]:
+    for dataset_idx in [0]:
         dataset_name = ["voltage_v1.2", "voltage_v1.2_cross2", "voltage_v1.2_cross3",
                         "voltage_v1.2_L1_6", "voltage_v1.2_L1_4", "voltage_v1.2_L1_2", "voltage_v1.2_L1_1", 
                         "voltage_v1.2_TEG_2", "voltage_v1.2_TEG_1", "voltage_v1.2_HPC_8", "voltage_v1.2_HPC_4",
@@ -227,7 +227,7 @@ for mode in ["train", "val"]:
             
             tp_gt, tp_comp, fn_gt, fp_comp, performance_cons_off = nf_match_neurons_in_binary_masks(
                     mask_gt, mask_pr, thresh_cost=0.7, min_dist=10, print_assignment=True,
-                    plot_results=True, Cn=image[:,:,0], labels=['GT', 'MRCNN'])
+                    plot_results=True, Cn=image[:,:,0], labels=['GT', 'MRCNN'], colors=['red', 'yellow'])
             #plt.savefig(folder +dataset.image_info[image_id]['id'][:-4]+'_compare.pdf')
             plt.close()
             performance[info['id'][:-4]] = performance_cons_off
